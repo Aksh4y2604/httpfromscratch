@@ -3,15 +3,19 @@ package request
 import (
 	"bytes"
 	"fmt"
+	"httpfromscratch/internal/headers"
 	"io"
+	"strconv"
 )
 
 type parserState string
 
 const (
-	StateInit  parserState = "init"
-	StateDone  parserState = "done"
-	StateError parserState = "error"
+	StateInit   parserState = "init"
+	StateDone   parserState = "done"
+	StateError  parserState = "error"
+	StateHeader parserState = "header"
+	StateBody   parserState = "body"
 )
 
 type RequestLine struct {
@@ -23,10 +27,13 @@ type RequestLine struct {
 type Request struct {
 	RequestLine RequestLine
 	state       parserState
+	Headers     headers.Headers
+	Body        []byte
 }
 
 var ERROR_MALFORMED_REQ_LINE = fmt.Errorf("Bad request line")
 var ERROR_ERROR_STATE = fmt.Errorf("Error State")
+var ERROR_BODY_PARSE = fmt.Errorf("Error parsing body")
 var SEPERATOR = []byte("\r\n")
 
 func parseRequestLine(b []byte) (*RequestLine, int, error) {
@@ -56,6 +63,9 @@ func parseRequestLine(b []byte) (*RequestLine, int, error) {
 
 func (r *Request) parse(data []byte) (int, error) {
 	read := 0
+	if r.Headers == nil {
+		r.Headers = headers.NewHeaders()
+	}
 outer:
 	for {
 		switch r.state {
@@ -69,8 +79,50 @@ outer:
 			}
 			r.RequestLine = *rl
 			read += n
-			r.state = StateDone
+			r.state = StateHeader
+		case StateHeader:
+			n, done, err := r.Headers.Parse(data[read:])
+			if err != nil {
+				return 0, err
+			}
+			if n == 0 {
+				break outer
+			}
+			read += n
+			if done {
+				r.state = StateBody
+			} else {
+				break outer
+			}
 
+		case StateBody:
+			contentLengthStr := r.Headers.Get("content-length")
+			if contentLengthStr == "" {
+				r.state = StateDone
+				break outer
+			}
+
+			contentLen, err := strconv.Atoi(contentLengthStr)
+			if err != nil {
+				return 0, err
+			}
+
+			// Not enough data yet to read full body
+			if len(data[read:]) < contentLen {
+				break outer
+			}
+			if len(data[read:]) > contentLen {
+				return 0, ERROR_BODY_PARSE
+			}
+
+			if contentLen == 0 {
+				r.Body = []byte{}
+			} else {
+				r.Body = data[read : read+contentLen]
+				read += contentLen
+			}
+
+			r.state = StateDone
 		case StateDone:
 			break outer
 		case StateError:

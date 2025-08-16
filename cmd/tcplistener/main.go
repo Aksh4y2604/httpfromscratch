@@ -22,5 +22,9 @@ func main() {
 			log.Fatal("error", "error", err)
 		}
 		fmt.Printf("Request Line: \n - Method: %s \n - Target: %s \n - Version: %s \n", rq.RequestLine.Method, rq.RequestLine.RequestTarget, rq.RequestLine.HttpVersion)
+		for k, v := range rq.Headers {
+			fmt.Printf("Header: %s: %s\n", k, v)
+		}
+		fmt.Printf("Body: %s\n", string(rq.Body))
 	}
 }

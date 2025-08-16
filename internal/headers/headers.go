@@ -16,6 +16,10 @@ var CRLF = []byte("\r\n\r\n")
 var ERROR_INVALID_REQ = fmt.Errorf("Error State")
 var ERROR_MAL_HEADER = fmt.Errorf("Malformed Header")
 
+func NewHeaders() Headers {
+	return Headers{}
+}
+
 func parseHeader(fieldLine []byte) (string, string, error) {
 	parts := bytes.SplitN(fieldLine, []byte(":"), 2) // split into key + rest
 	if len(parts) != 2 {
@@ -69,4 +73,7 @@ func (h Headers) Parse(data []byte) (int, bool, error) {
 		read += lineEndIdx + len(RN)
 	}
 	return read, done, nil
+}
+func (h Headers) Get(key string) string {
+	return h[strings.ToLower(key)]
 }
