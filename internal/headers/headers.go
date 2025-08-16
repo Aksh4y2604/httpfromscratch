@@ -66,9 +66,10 @@ func (h Headers) Parse(data []byte) (int, bool, error) {
 		}
 
 		if h[key] != "" {
-			h[key] = h[key] + ", " + val
+			newVal := h.Get(key) + ", " + val
+			h.Set(key, newVal)
 		} else {
-			h[key] = val
+			h.Set(key, val)
 		}
 		read += lineEndIdx + len(RN)
 	}
@@ -76,4 +77,7 @@ func (h Headers) Parse(data []byte) (int, bool, error) {
 }
 func (h Headers) Get(key string) string {
 	return h[strings.ToLower(key)]
+}
+func (h Headers) Set(key string, val string) {
+	h[strings.ToLower(key)] = val
 }

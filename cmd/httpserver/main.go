@@ -1,10 +1,10 @@
-package httpserver
+package main
 
 import (
+	"httpfromscratch/internal/server"
 	"log"
 	"os"
 	"os/signal"
-	"server"
 	"syscall"
 )
 
