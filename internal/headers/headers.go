@@ -16,8 +16,6 @@ var CRLF = []byte("\r\n\r\n")
 var ERROR_INVALID_REQ = fmt.Errorf("Error State")
 var ERROR_MAL_HEADER = fmt.Errorf("Malformed Header")
 
-const whiteSpace = "\t\r\n"
-
 func parseHeader(fieldLine []byte) (string, string, error) {
 	parts := bytes.SplitN(fieldLine, []byte(":"), 2) // split into key + rest
 	if len(parts) != 2 {
@@ -33,7 +31,6 @@ func parseHeader(fieldLine []byte) (string, string, error) {
 
 	pattern := `^[A-Za-z0-9!#$%&'*+\-.\^_` + "`" + `|~]+$`
 
-	// Compile the regex
 	re := regexp.MustCompile(pattern)
 
 	if !re.MatchString(key) || key == "" || val == "" {
@@ -63,9 +60,12 @@ func (h Headers) Parse(data []byte) (int, bool, error) {
 		if err != nil {
 			return 0, false, err
 		}
-		fmt.Printf("key: %s \n val: %s\n", key, val)
 
-		h[key] = val
+		if h[key] != "" {
+			h[key] = h[key] + ", " + val
+		} else {
+			h[key] = val
+		}
 		read += lineEndIdx + len(RN)
 	}
 	return read, done, nil
