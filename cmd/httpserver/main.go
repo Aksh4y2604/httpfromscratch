@@ -1,10 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"httpfromscratch/internal/request"
 	"httpfromscratch/internal/response"
 	"httpfromscratch/internal/server"
-	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -14,24 +14,34 @@ import (
 const port = 42069
 
 func main() {
-	server, err := server.Serve(port, func(w io.Writer, req *request.Request) *server.HandlerError {
-		switch req.RequestLine.RequestTarget {
+	server, err := server.Serve(port, func(w *response.Writer, req *request.Request) {
 
+		h := response.GetDefaultHeaders(0)
+		h.Replace("Content-Type", "text/html")
+		body := []byte{}
+		statusCode := response.OK
+
+		switch req.RequestLine.RequestTarget {
 		case "/yourproblem":
-			return &server.HandlerError{
-				StatusCode: response.BadRequest,
-				Message:    "Your problem not my problem\n",
-			}
+			statusCode = response.BadRequest
+			body = []byte("<html> <head> <title>400 Bad Request</title> </head> <body> <h1>Bad Request</h1> <p>Your request honestly kinda sucked.</p> </body> </html>")
+			h.Replace("Content-length", fmt.Sprintf("%d", len(body)))
 		case "/myproblem":
-			return &server.HandlerError{
-				StatusCode: response.InternalError,
-				Message:    "My bad G \n",
-			}
+			statusCode = response.InternalError
+			body = []byte("<html> <head> <title>500 Internal Server Error</title> </head> <body> <h1>Internal Server Error</h1> <p>Something went wrong.</p> </body> </html>")
+			h.Replace("Content-length", fmt.Sprintf("%d", len(body)))
 		default:
-			w.Write([]byte("All good, frfr! \n"))
+
+			statusCode = response.OK
+			body = []byte("<html> <head> <title>200 OK</title> </head> <body> <h1>200 OK</h1> <p>Everything is fine.</p> </body> </html>")
+			h.Replace("Content-length", fmt.Sprintf("%d", len(body)))
 		}
-		return nil
+
+		w.WriteStatusLine(statusCode)
+		w.WriteHeaders(h)
+		w.WriteBody(body)
 	})
+
 	if err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}

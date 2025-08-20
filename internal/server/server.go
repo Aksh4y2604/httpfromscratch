@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"fmt"
 	"httpfromscratch/internal/request"
 	"httpfromscratch/internal/response"
@@ -18,33 +17,28 @@ type HandlerError struct {
 	Message    string
 }
 
-type Handler func(w io.Writer, req *request.Request) *HandlerError
+// type Handler func(w io.Writer, req *request.Request) *HandlerError
+
+type Handler func(w *response.Writer, req *request.Request)
 
 func handleConn(Server *Server, conn io.ReadWriteCloser) {
 	defer conn.Close()
+
+	responseWriter := response.Writer{
+		CurrentState: response.WriterStateInit,
+		Writer:       conn,
+	}
+
 	header := response.GetDefaultHeaders(0)
 	req, err := request.RequestFromReader(conn)
+
 	if err != nil {
-		response.WriteStatusLine(conn, response.BadRequest)
-		response.WriteHeaders(conn, header)
+		responseWriter.WriteStatusLine(response.BadRequest)
+		responseWriter.WriteHeaders(header)
 		return
 	}
-	buf := bytes.NewBuffer([]byte{})
-	handlerError := Server.handler(buf, req)
 
-	var body []byte = nil
-	var status response.StatusCode = response.OK
-
-	if handlerError != nil {
-		status = handlerError.StatusCode
-		body = []byte(handlerError.Message)
-	} else {
-		body = buf.Bytes()
-	}
-	header.Replace("content-length", fmt.Sprintf("%d", len(body)))
-	response.WriteStatusLine(conn, status)
-	response.WriteHeaders(conn, header)
-	conn.Write(body)
+	Server.handler(&responseWriter, req)
 
 }
 
@@ -61,23 +55,28 @@ func runServer(Server *Server, listener net.Listener) error {
 			go handleConn(Server, conn)
 		}
 	}()
-	return nil
 
+	return nil
 }
 
 func Serve(port uint16, handler Handler) (*Server, error) {
 
 	server := &Server{}
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+
 	if err != nil {
 		return nil, err
 	}
+
 	server.closed = false
 	server.handler = handler
+
 	err = runServer(server, listener)
+
 	if err != nil {
 		return nil, err
 	}
+
 	return server, nil
 }
 
