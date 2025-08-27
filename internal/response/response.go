@@ -103,3 +103,29 @@ func WriteHeaders(w io.Writer, headers headers.Headers) error {
 	w.Write([]byte("\r\n"))
 	return nil
 }
+
+func (w *Writer) WriteChunkedBody(p []byte) (int, error) {
+	size := len(p)
+	if len(p) == 0 {
+		return 0, fmt.Errorf("Empty body")
+	}
+	fmt.Fprintf(w.Writer, "%x\r\n", size)
+	w.Writer.Write(p)
+	w.Writer.Write([]byte("\r\n"))
+	return size, nil
+}
+
+func (w *Writer) WriteChunkedBodyDone() (int, error) {
+	w.Writer.Write([]byte("0\r\n\r\n"))
+	return 0, nil
+
+}
+
+func (w *Writer) WriteTrailers(h headers.Headers) error {
+	w.Writer.Write([]byte("\r\n"))
+	for key, val := range h {
+		w.Writer.Write([]byte(key + ": " + val + "\r\n"))
+	}
+	w.Writer.Write([]byte("\r\n"))
+	return nil
+}

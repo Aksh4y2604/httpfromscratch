@@ -84,3 +84,6 @@ func (h Headers) Set(key string, val string) {
 func (h Headers) Replace(key string, val string) {
 	h[strings.ToLower(key)] = val
 }
+func (h Headers) Delete(key string) {
+	delete(h, strings.ToLower(key))
+}

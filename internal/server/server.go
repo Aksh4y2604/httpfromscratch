@@ -17,8 +17,6 @@ type HandlerError struct {
 	Message    string
 }
 
-// type Handler func(w io.Writer, req *request.Request) *HandlerError
-
 type Handler func(w *response.Writer, req *request.Request)
 
 func handleConn(Server *Server, conn io.ReadWriteCloser) {
@@ -43,6 +41,7 @@ func handleConn(Server *Server, conn io.ReadWriteCloser) {
 }
 
 func runServer(Server *Server, listener net.Listener) error {
+
 	go func() {
 		for {
 			conn, err := listener.Accept()
